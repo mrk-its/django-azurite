@@ -9,6 +9,9 @@ from azurite.settings import AZURITE
 from django.core.files.base import File, ContentFile
 from django.core.files.storage import Storage
 
+import gzip
+import StringIO
+
 class AzureStorage(Storage):
     """
     Custom file storage system for Azure
@@ -89,8 +92,15 @@ class AzureStorage(Storage):
             content_str = ''.join(chunk for chunk in content.chunks())
         else:
             content_str = content.read()
+
+        if content_type in AZURITE['COMPRESS_CONTENT_TYPES']:
+            content_encoding = 'gzip'
+            content_str = self._gzip_compress(content_str)
+        else:
+            content_encoding = None
+
         self._get_service().put_blob(self.container, name, content_str,
-            'BlockBlob', x_ms_blob_content_type=content_type)
+            'BlockBlob', x_ms_blob_content_type=content_type, x_ms_blob_content_encoding=content_encoding)
         content.close()
 
         return name
@@ -156,6 +166,14 @@ class AzureStorage(Storage):
                 '%a, %d %b %Y %H:%M:%S %Z')
         except WindowsAzureMissingResourceError:
             pass
+
+    def _gzip_compress(self, data):
+        stringio = StringIO.StringIO()
+        gzip_file = gzip.GzipFile(fileobj=stringio, mode='w')
+        gzip_file.write(data)
+        gzip_file.close()
+
+        return stringio.getvalue()
 
 
 class AzureStaticStorage(AzureStorage):

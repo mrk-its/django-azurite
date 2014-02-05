@@ -7,6 +7,7 @@ AZURITE = {
     'STATIC_CONTAINER': None,
     'CDN_HOST': None,
     'USE_SSL': False,
+    'COMPRESS_CONTENT_TYPES': (),
 }
 
 if hasattr(settings, 'AZURITE'):
